@@ -62,15 +62,12 @@ end
 def apply(f, parser)
   lambda do |input|
     r = parse(parser, input)
-    PARSE_RESULT.new(results: f.call(r.results), rest: r.rest, is_valid?: r.is_valid?)
+    PARSE_RESULT.new(results: (r.is_valid? ? f.call(r.results) : r.results), rest: r.rest, is_valid?: r.is_valid?)
   end
 end
 
-def map_apply(f, parser)
-  lambda do |input|
-    r = parse(parser, input)
-    PARSE_RESULT.new(results: r.results.map(&f), rest: r.rest, is_valid?: r.is_valid?)
-  end
+def between(left, content, right)
+  apply(->(r) { r[1] }, sequence(left, content, right))
 end
 
 def lit_digit(i)
@@ -103,8 +100,14 @@ def char_in(char_set)
   end
 end
 
-def lit_character(c)
-  char_in([c])
+def lit_string(word)
+  lambda do |input|
+    if input.start_with?(word)
+      PARSE_RESULT.new(results: word, rest: input[word.size..], is_valid?: true)
+    else
+      PARSE_RESULT.new(results: [], rest: input, is_valid?: false)
+    end
+  end
 end
 
 def to_int(s)
@@ -130,9 +133,9 @@ letters = join_chars(many(letter))
 expression = nil
 
 #add_term = map_apply(lambda { |(a, _, b)| a + b }, sequence(integer, lit_character('+'), integer))
-add_term = apply(lambda { |(a, _, b)| a + b }, sequence(integer, lit_character('+'), integer))
+add_term = apply(lambda { |(a, _, b)| a + b }, sequence(integer, lit_string('+'), integer))
 # add_term = sequence(integer, lit_character('+'), integer)
-mult_term = apply(lambda { |(a, _, b)| a * b }, sequence(integer, lit_character('*'), integer))
+mult_term = apply(lambda { |(a, _, b)| a * b }, sequence(integer, lit_string('*'), integer))
 # mult_term = sequence(add_term, lit_character('*'), add_term)
 #mult_term = choice(sequence(integer, lit_character('*'), integer), sequence(expression, lit_character('*'), expression))
 
@@ -157,13 +160,25 @@ expression = choice(add_term, mult_term)
 # parse_result = parse(sequence(integer, choice(choice(lit_character('+'), lit_character('*')), sequence(some(whitespace), choice(lit_character('+'), lit_character('*')), some(whitespace))), integer), '123 + 45')
 # parse_result = parse(sequence(integer, some(whitespace), choice(lit_character('+'), lit_character('*')), some(whitespace), integer), '123 + 45')
 
-parse_result = parse(apply(->(x) { x.upcase }, lit_character('h')), 'hello')
+parse_result = parse(apply(->(x) { x.upcase }, lit_string('hello')), 'hello world')
+parse_result = parse(letters, 'hello world')
+parse_result = parse(between(lit_string('('), letters, lit_string(')')), '(hello )')
+
+parse_result = parse(
+  between(
+    lit_string('"'),
+    sequence(lit_string('diceroll'), lit_string(':'), digits, lit_string('d'), digits),
+    lit_string('"'),
+  ),
+  '"diceroll:2d8"'
+)
+
 
 # parse_result = parse(add_term, '2+3')
 # parse_result = parse(expression, '2*3')
 # parse_result = parse(mult_term, '10+2*2+3') # 15
 
-# parse_result = parse(sequence(digits, end_of_input), '12') # 15
+#parse_result = parse(sequence(digits, end_of_input), '12') # 15
 
 puts parse_result.results
 p parse_result.results
