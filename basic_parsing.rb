@@ -62,7 +62,19 @@ end
 def apply(f, parser)
   lambda do |input|
     r = parse(parser, input)
-    PARSE_RESULT.new(results: (r.is_valid? ? f.call(r.results) : r.results), rest: r.rest, is_valid?: r.is_valid?)
+    return r unless r.is_valid?
+
+    PARSE_RESULT.new(results: f.call(r.results), rest: r.rest, is_valid?: r.is_valid?)
+  end
+end
+
+def chain(f, parser)
+  lambda do |input|
+    r = parse(parser, input)
+    return r unless r.is_valid?
+
+    new_parser = f.call(r.results)
+    parse(new_parser, r.rest)
   end
 end
 
@@ -164,15 +176,29 @@ parse_result = parse(apply(->(x) { x.upcase }, lit_string('hello')), 'hello worl
 parse_result = parse(letters, 'hello world')
 parse_result = parse(between(lit_string('('), letters, lit_string(')')), '(hello )')
 
-parse_result = parse(
-  between(
-    lit_string('"'),
-    sequence(lit_string('diceroll'), lit_string(':'), digits, lit_string('d'), digits),
-    lit_string('"'),
-  ),
-  '"diceroll:2d8"'
-)
+stringParser = apply(->(r) { { type: 'string', value: r} }, letters)
+numberParser = apply(->(r) { { type: 'number', value: r} }, digits)
+dicerollParser = apply(->((a, _, c)) { { type: 'diceroll', value: [to_int(a), to_int(c)] } }, sequence(digits, lit_string('d'), digits))
 
+parse_result = parse(
+  chain(
+    lambda do |type|
+      case type
+      when 'string'
+        stringParser
+      when 'number'
+        numberParser
+      when 'diceroll'
+        dicerollParser
+      end
+    end,
+    apply(->(r) { r[0] }, sequence(
+      choice(lit_string('string'), lit_string('number'), lit_string('diceroll')),
+      lit_string(':'))
+    )
+  ),
+  'diceroll:2d8'
+)
 
 # parse_result = parse(add_term, '2+3')
 # parse_result = parse(expression, '2*3')
