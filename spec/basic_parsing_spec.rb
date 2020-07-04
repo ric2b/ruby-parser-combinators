@@ -33,7 +33,7 @@ describe "basic parsing" do
 
   describe "between" do
     it "works" do
-      expect(P.parse(P.between(P.str('('), P.letters, P.str(')')), '(hello)').result).to eq('hello')
+      expect(P.parse(P.between_parentheses(P.letters), '(hello)').result).to eq('hello')
     end
   end
 
@@ -86,7 +86,7 @@ describe "basic parsing" do
       end
 
       def array
-        P.between(P.str('['), P.sep_by(P.str(','), value), P.str(']'))
+        P.between_brackets(P.sep_by(P.str(','), value))
       end
 
       expect(P.parse(array, '[12,[4,4],65,7]').result).to eq([12, [4, 4], 65, 7])

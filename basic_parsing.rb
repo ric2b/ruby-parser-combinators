@@ -109,7 +109,7 @@ module Parsing
     end
   end
 
-  def between(left, content, right)
+  def between(left, right, content)
     apply(->(r) { r[1] }, sequence(left, content, right))
   end
 
@@ -172,29 +172,44 @@ module Parsing
   def integer; apply(method(:to_int), digits) end
   def letter; char_in([*'a'..'z', *'A'..'Z']) end
   def letters; join_results(many(letter)) end
+  def between_brackets(content); between(str('['), str(']'), content) end
+  def between_parentheses(content); between(str('('), str(')'), content) end
 end
-# expression = nil
 
-#add_term = map_apply(lambda { |(a, _, b)| a + b }, sequence(integer, lit_character('+'), integer))
-#add_term = apply(lambda { |(a, _, b)| a + b }, sequence(integer, str('+'), integer))
-# add_term = sequence(integer, lit_character('+'), integer)
-#mult_term = apply(lambda { |(a, _, b)| a * b }, sequence(integer, str('*'), integer))
-# mult_term = sequence(add_term, lit_character('*'), add_term)
-#mult_term = choice(sequence(integer, lit_character('*'), integer), sequence(expression, lit_character('*'), expression))
+P = Parsing
 
-#expression = choice(add_term, mult_term)
+def evaluate(node)
+  case node.fetch(:type)
+  when 'number' then node.fetch(:value)
+  when 'operation'
+    case node[:value][:op]
+    when '+' then evaluate(node[:value][:a]) + evaluate(node[:value][:b])
+    when '-' then evaluate(node[:value][:a]) - evaluate(node[:value][:b])
+    when '*' then evaluate(node[:value][:a]) * evaluate(node[:value][:b])
+    when '/' then evaluate(node[:value][:a]) / evaluate(node[:value][:b])
+    end
+  end
+end
 
-# addition = apply(lambda { |(a, _, b)| Integer(a) + Integer(b) }, add_term)
-# multiplication = apply(lambda { |(a, _, b)| Integer(a) * Integer(b) }, mult_term)
-# expression = choice(addition, multiplication)
-#
-# parse_result = parse(sequence(integer, choice(choice(lit_character('+'), lit_character('*')), sequence(some(whitespace), choice(lit_character('+'), lit_character('*')), some(whitespace))), integer), '123 + 45')
-# parse_result = parse(sequence(integer, some(whitespace), choice(lit_character('+'), lit_character('*')), some(whitespace), integer), '123 + 45')
+def expression
+  P.lazy(-> { P.choice(number, operation) })
+end
 
-# parse_result = parse(add_term, '2+3')
-# parse_result = parse(expression, '2*3')
-# parse_result = parse(mult_term, '10+2*2+3') # 15
+def number
+  P.apply(
+    ->(x) { { type: 'number', value: x } },
+    P.integer
+  )
+end
 
-# puts parse_result.results
-# p parse_result.results
-# p parse_result.rest
+def operation
+  P.apply(
+    ->((a, op, b)) { { type: 'operation', value: { op: op, a: a, b: b } } },
+    P.between_parentheses(P.sequence(expression, P.char_in(['+', '-', '*', '/']), expression))
+  )
+end
+
+p evaluate(P.parse(expression, '1989').result)
+p evaluate(P.parse(expression, '(1+2)').result)
+p evaluate(P.parse(expression, '((2+3)*5))').result)
+p evaluate(P.parse(expression, '(((2+3)*5)-3)').result)
