@@ -100,6 +100,12 @@ def chain(f, parser)
   end
 end
 
+def lazy(parser_thunk)
+  lambda do |input|
+    parse(parser_thunk.call, input)
+  end
+end
+
 def between(left, content, right)
   apply(->(r) { r[1] }, sequence(left, content, right))
 end
@@ -222,7 +228,10 @@ parse_result = parse(
   'diceroll:2d8'
 )
 
-parse_result = parse(sep_by(str(','), digits), '12,4,65,7')
+value = lazy(-> { binding.eval('choice(digits, array)') })
+array = between(str('['), sep_by(str(','), value), str(']'))
+
+parse_result = parse(array, '[12,[4,4],65,7]')
 
 # parse_result = parse(add_term, '2+3')
 # parse_result = parse(expression, '2*3')
