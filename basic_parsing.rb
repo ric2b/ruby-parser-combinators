@@ -154,7 +154,7 @@ def to_int(s)
   Integer(s)
 end
 
-def join_chars(parser)
+def join_results(parser)
   apply(lambda { |x| x.join }, parser)
 end
 
@@ -162,13 +162,13 @@ def flatten(parser)
   apply(lambda { |x| x.flatten }, parser)
 end
 
-whitespace_char = char_in([' ', "\t", "\r", "\n", "\f", "\v"])
-whitespace = join_chars(many(char_in([' ', "\t", "\r", "\n", "\f", "\v"])))
-digit = char_in([*'0'..'9'])
-digits = join_chars(many(digit))
-integer = apply(method(:to_int), digits)
-letter = char_in([*'a'..'z', *'A'..'Z'])
-letters = join_chars(many(letter))
+def whitespace_char; char_in([' ', "\t", "\r", "\n", "\f", "\v"]) end
+def whitespace; join_results(many(char_in([' ', "\t", "\r", "\n", "\f", "\v"]))) end
+def digit; char_in([*'0'..'9']) end
+def digits; join_results(many(digit)) end
+def integer; apply(method(:to_int), digits) end
+def letter; char_in([*'a'..'z', *'A'..'Z']) end
+def letters; join_results(many(letter)) end
 
 expression = nil
 
@@ -228,8 +228,13 @@ parse_result = parse(
   'diceroll:2d8'
 )
 
-value = lazy(-> { binding.eval('choice(digits, array)') })
-array = between(str('['), sep_by(str(','), value), str(']'))
+def value
+  lazy(-> { choice(digits, array) })
+end
+
+def array
+  between(str('['), sep_by(str(','), value), str(']'))
+end
 
 parse_result = parse(array, '[12,[4,4],65,7]')
 
