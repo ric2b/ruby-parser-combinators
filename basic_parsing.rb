@@ -97,6 +97,8 @@ module Parsing
       return r unless r.is_valid?
 
       STATE.new(result: f.call(r.result), rest: r.rest, is_valid?: r.is_valid?)
+    rescue StandardError
+      r
     end
   end
 
