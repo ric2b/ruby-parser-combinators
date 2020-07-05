@@ -38,8 +38,18 @@ describe "basic parsing" do
   end
 
   describe "many" do
-    it "works" do
-      expect(P.parse(P.many(P.str('h')), 'hhhhhee').result).to eq(['h', 'h', 'h', 'h', 'h'])
+    context "when looking for 1+ matches" do
+      it "works" do
+        expect(P.parse(P.many(P.str('h')), 'hhhhhee').result).to eq(['h', 'h', 'h', 'h', 'h'])
+      end
+    end
+
+    context "when looking for 0+ matches" do
+      it "works" do
+        r = P.parse(P.many(P.str('h'), at_least: 0), 'fff')
+        expect(r.result).to eq([])
+        expect(r.is_valid?).to be_truthy
+      end
     end
 
     it "works for digits" do
@@ -119,7 +129,7 @@ describe "basic parsing" do
 
   describe "end of input" do
     it "works" do
-      expect(P.parse(P.sequence(P.digits, P.end_of_input), '12').result).to eq(['12', []])
+      expect(P.parse(P.sequence(P.digits, P.end_of_input), '12').result).to eq(['12', nil])
     end
   end
 
