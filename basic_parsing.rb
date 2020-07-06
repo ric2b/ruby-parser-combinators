@@ -91,6 +91,10 @@ module Parsing
     end
   end
 
+  def until_end(parser)
+    apply(->(r) { r[0] }, sequence(parser, end_of_input))
+  end
+
   def apply(f, parser)
     lambda do |input|
       r = parse(parser, input)

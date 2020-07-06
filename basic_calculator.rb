@@ -14,8 +14,27 @@ def evaluate(node)
   end
 end
 
+# Expr ::= Term ('+' Term | '-' Term)*
+# Term ::= Factor ('*' Factor | '/' Factor)*
+# Factor ::= ['-'] (Number | '(' Expr ')')
+# Number ::= Digit+
+
 def expression
-  P.lazy(-> { P.choice(number, operation) })
+  P.apply(
+    ->(r) { r[1].reduce(r[0]) { |a, (op, b)| { type: 'operation', value: { op: op, a: a, b: b } } } },
+    P.sequence(P.token(term), P.many(P.sequence(P.char_in(['+', '-']), P.token(term)), at_least: 0)),
+  )
+end
+
+def term
+  P.apply(
+    ->(r) { r[1].reduce(r[0]) { |a, (op, b)| { type: 'operation', value: { op: op, a: a, b: b } } } },
+    P.sequence(P.token(factor), P.many(P.sequence(P.char_in(['*', '/']), P.token(factor)), at_least: 0)),
+  )
+end
+
+def factor
+  P.lazy(-> { P.choice(number, P.between_parentheses(expression)) })
 end
 
 def number
@@ -25,14 +44,11 @@ def number
   )
 end
 
-def operation
-  P.apply(
-    ->((a, op, b)) { { type: 'operation', value: { op: op, a: a, b: b } } },
-    P.token(P.between_parentheses(P.sequence(P.token(expression), P.char_in(['+', '-', '*', '/']), P.token(expression))))
-  )
-end
-
-p evaluate(P.parse(expression, ' 1989   ').result)
-p evaluate(P.parse(expression, ' ( 1 + 2 ) ').result)
+p evaluate(P.parse(expression, '1989').result)
+p evaluate(P.parse(expression, '(1989)').result)
+p evaluate(P.parse(expression, '1+2').result)
+p evaluate(P.parse(P.until_end(expression), '1+2*3').result)
+p evaluate(P.parse(expression, '(1+2)*3').result)
+p evaluate(P.parse(expression, '(1+2)*3-1*2').result)
 p evaluate(P.parse(expression, '( ( 2 + 3 ) * 5 ) )').result)
-p evaluate(P.parse(expression, '( ( ( 2 + 3 ) * 5 ) - 13 )').result)
+p evaluate(P.parse(expression, '((( 2 + 3) *5)- 13 )').result)
