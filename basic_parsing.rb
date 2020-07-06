@@ -181,8 +181,12 @@ module Parsing
   def integer; apply(->(s) { Integer(s) }, digits) end
   def letter; char_in([*'a'..'z', *'A'..'Z']) end
   def letters; join_results(many(letter)) end
+  def between_braces(content) between(str('{'), str('}'), content) end
   def between_brackets(content) between(str('['), str(']'), content) end
   def between_parentheses(content) between(str('('), str(')'), content) end
+  def between_single_quotes(content) between(str('\''), str('\''), content) end
+  def between_double_quotes(content) between(str('"'), str('"'), content) end
+  def between_quotes(content) choice(between_single_quotes(content), between_double_quotes(content)) end
   def between_whitespace(content) between(whitespace, whitespace, content) end
   def token(content) between(maybe(whitespace), maybe(whitespace), content) end
 end
