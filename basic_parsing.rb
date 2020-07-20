@@ -174,6 +174,18 @@ module Parsing
     apply(lambda { |x| x.flatten }, parser)
   end
 
+  def fail
+    lambda do |input|
+      STATE.new(result: nil, rest: input, is_valid?: false)
+    end
+  end
+
+  def succeed(r)
+    lambda do |input|
+      STATE.new(result: r, rest: input, is_valid?: true)
+    end
+  end
+
   def whitespace_char; char_in([' ', "\t", "\r", "\n", "\f", "\v"]) end
   def whitespace; join_results(many(char_in([' ', "\t", "\r", "\n", "\f", "\v"]))) end
   def digit; char_in([*'0'..'9']) end
