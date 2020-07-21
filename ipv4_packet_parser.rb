@@ -9,7 +9,7 @@ module IPv4Parser
   def parse_packet(input)
     B.parse(
       P.chain(
-        ->(packet_data) { packet_data['IHL'] > 5 ? P.apply(tag('Options'), B.uint(236)) : P.succeed(packet_data) },
+        ->(packet_data) { packet_data['IHL'] > 5 ? P.apply(tag('Options'), B.uint(32 * (packet_data['IHL'] - 5))) : P.succeed(packet_data) },
         P.apply(
           ->(sections) { sections.to_h },
           P.sequence(
